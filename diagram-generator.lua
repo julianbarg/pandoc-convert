@@ -62,6 +62,10 @@ local pdflatex_path = os.getenv("PDFLATEX") or "pdflatex"
 -- "asymptote_path".
 local asymptote_path = os.getenv ("ASYMPTOTE") or "asy"
 
+local convert_path = os.getenv("CONVERT") or "convert"
+
+local montage_path = os.getenv("MONTAGE") or "montage"
+
 -- The default format is SVG i.e. vector graphics:
 local filetype = "svg"
 local mimetype = "image/svg+xml"
@@ -109,6 +113,12 @@ function Meta(meta)
   asymptote_path = stringify(
      meta.asymptote_path or meta.asymptotePath or asymptote_path
   )
+  convert_path = stringify(
+     meta.convert_path or meta.convertPath or convert_path
+  )
+  montage_path = stringify(
+     meta.montage_path or meta.montagePath or montage_path
+  )
 end
 
 -- Call plantuml.jar with some parameters (cf. PlantUML help):
@@ -124,6 +134,26 @@ end
 -- (thanks @muxueqz for this code):
 local function graphviz(code, filetype)
   return pandoc.pipe(dot_path, {"-T" .. filetype}, code)
+end
+
+local function imagemagick ( path, code )
+  os.execute ( path .. " " .. code .. " tmp.png" )
+  local img_data
+  local r = io.open ( "tmp.png", 'rb' )
+  if r then
+    img_data = r:read ( "*all" )
+    r:close()
+  end
+  --[[os.remove ( "tmp.png" )--]]
+  return img_data
+end
+
+local function convert ( code )
+  return imagemagick ( convert_path, code )
+end
+
+local function montage ( code )
+  return imagemagick ( montage_path, code )
 end
 
 --
@@ -319,6 +349,8 @@ function CodeBlock(block)
     tikz = tikz2image,
     py2image = py2image,
     asymptote = asymptote,
+    convert = convert,
+    montage = montage,
   }
 
   -- Check if a converter exists for this block. If not, return the block
